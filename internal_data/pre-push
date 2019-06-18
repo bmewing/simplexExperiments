@@ -1,0 +1,6 @@
+#!/bin/sh
+# Run lint_package, print results, use number of lint issues as exit status
+Rscript -e '(lint_issues = lintr::lint_package()); quit(save = "no", status = length(lint_issues))'
+
+# Exit with status of Rscript (non-zero will reject commit)
+exit $?
