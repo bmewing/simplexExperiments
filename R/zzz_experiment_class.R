@@ -3,7 +3,6 @@
 #' @docType class
 #' @importFrom R6 R6Class
 #' @export
-#' @param k dimensionality of space being experimented
 
 experiment = R6::R6Class("Simplex Experiment",
                          public = list(
@@ -12,5 +11,9 @@ experiment = R6::R6Class("Simplex Experiment",
                            treatments = list(),
                            constraints = list(),
                            responses = list(),
-                           initialize = init
+                           initialize = init,
+                           add_response = add_response
+                         ),
+                         private = list(
+                           valid = valid_experiment
                          ))

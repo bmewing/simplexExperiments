@@ -1,10 +1,11 @@
 add_response = function(name = paste0("y", length(self$responses) + 1),
-                        range = NULL, value = function(y, hist){100 - y}, weight = 1){ #nolint
+                        range = NULL, value = function(y, hist){100 - y}, weight = 3){ #nolint
   #' Add a response to the experiment
   #'
   #' @param name a unique length 1 character vector giving the name of a response
   #' @param range optional length 2 numeric vector giving boundaries on possible response levels
-  #' @param value function to compute the value of a particular response point
+  #' @param value function to compute the value of a particular response point,
+  #' the algorithm will maximize the response of this function
   #' @param weight relative weighting factor used to prioritize some responses over others
   #' @return invisible
   #'
@@ -14,7 +15,7 @@ add_response = function(name = paste0("y", length(self$responses) + 1),
   #' be used however you like to return a numeric value.
   if (!is.numeric(weight) || length(weight) != 1) stop("Treatment weight must be a single numeric vector")
   if (!is.character(name) || length(name) != 1) stop("Treatment name must be a single character vector")
-  if ((!is.null(range) && length(range != 2)) || (!is.null(range) && !is.numeric(range))){ #nolint
+  if ((!is.null(range) && length(range) != 2) || (!is.null(range) && !is.numeric(range))){ #nolint
     stop("Response ranges must be exactly two numeric values (or left NULL)")
   }
   names = purrr::modify_depth(self$responses, 1, `[[`, "name")
@@ -45,7 +46,7 @@ add_treatment = function(name = paste0("x", length(self$treatments) + 1), bounda
   #' @param boundaries optional length 2 numeric vector giving boundaries on possible treatment levels
   #' @return invisible
   if (!is.character(name) || length(name) != 1) stop("Treatment name must be a single character vector")
-  if ( (!is.null(boundaries) && length(boundaries != 2)) ||
+  if ( (!is.null(boundaries) && length(boundaries) != 2) ||
       (!is.null(boundaries) && !is.numeric(boundaries))) {
     stop("Boundaries must be exactly two numeric values (or left NULL)")
   }
@@ -83,15 +84,15 @@ add_constraint = function(constraint){
   comparison_operators = c(" < ", " > ", " <= ", " >= ", " == ")
   comparison_matches = vapply(comparison_operators, grepl, FUN.VALUE = logical(1), x = const_string)
   if (sum(comparison_matches) != 1) stop("Constraint must include a comparison operator")
-  const_string = grep("[a-zA-Z0-9]", strsplit(const_string, " ")[[1]], value = TRUE)
+
   names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
-  valid = vapply(names, check_constraint_elements, FUN.VALUE = logical(1), treatments = names) #nolint
-  if (all(valid)){
+  tmp = gen_fake_treatments(names)
+  tryCatch({
+    with(tmp, expr = eval(const))
     l = length(self$constraints) + 1
     self$constraints[[l]] = const
-  } else {
-    stop("Invalid constraint provided. Ensure you're passing in a valid expression")
-  }
+  }, error = function(e){stop("Invalid constraint provided. Ensure you're passing in a valid expression")}) #nolint
+
   invisible()
 }
 
@@ -130,13 +131,22 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   #' The initial simplex has as the first vertex the combination of all starting coordinates. Each sequential vertex is
   #' produced by adding some amount of the step size to one or more of the other treatments.
 
+  private$valid() #nolint
+
   if (length(self$simplexes) != 0){ #nolint
     stop("This experiment already has simplexes, you cannot generate a new initial one.")
   }
   if (length(method) != 1) stop("You can only specify one method for initial generation")
   if (is.null(data)) stop("You must provide information through the 'data' parameter to generate the initial simplex")
 
+  names = purrr::modify_depth(self$treatments, 1, `[[`, "name") #nolint
+
   if (method == "manual"){
+    if (!all(names %in% names(data))) stop("Not all treatments are included in the initial simplex")
+    if (nrow(data) != self$k + 1) stop(paste0("You must provide ", self$k + 1, " initial vertices")) #nolint
+    data = data[names]
+    if (any(is.na(data)) || any(is.null(data))) stop("Vertices cannot contain missing coordinates.")
+
     # TODO: check cohypoplanarity (page 164)
   } else if (method %in% c("corner", "tilted")){
     # TODO: collect step size and starting coordinate for each factor (page 169)
