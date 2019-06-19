@@ -8,7 +8,9 @@
 experiment = R6::R6Class("Simplex Experiment",
                          public = list(
                            k = NULL,
-                           initialize = function(k = NA_integer_) {
-                             self$k = k
-                           }
+                           simplexes = list(),
+                           treatments = list(),
+                           constraints = list(),
+                           responses = list(),
+                           initialize = init
                          ))

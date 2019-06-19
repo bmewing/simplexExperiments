@@ -12,7 +12,8 @@ License: MIT
 Encoding: UTF-8
 LazyData: true
 Imports:
-  R6
+  R6,
+  purrr
 Suggests:
   covr,
   testthat
