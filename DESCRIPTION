@@ -1,5 +1,5 @@
 Package: simplexExperiments
-Title: Experimentation via Sequential Simplex Optimization.
+Title: Experimentation via Sequential Simplex Optimization
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Mark",
