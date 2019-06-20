@@ -5,8 +5,7 @@
 \title{Add a response to the experiment}
 \usage{
 add_response(name = paste0("y", length(self$responses) + 1),
-  range = NULL, value = function(y, hist) {     100 - y },
-  weight = 3)
+  range = NULL, value = NULL, weight = 3)
 }
 \arguments{
 \item{name}{a unique length 1 character vector giving the name of a response}
@@ -27,5 +26,5 @@ Add a response to the experiment
 \details{
 The value function must accept two positional arguments. The first is for the 'current' response
 value while the second is for a vector of all input response values. These two inputs can then
-be used however you like to return a numeric value.
+be used however you like to return a numeric value. e.g. `function(y, hist){100 - y}`
 }

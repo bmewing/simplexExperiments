@@ -1,5 +1,5 @@
 add_response = function(name = paste0("y", length(self$responses) + 1),
-                        range = NULL, value = function(y, hist){100 - y}, weight = 3){ #nolint
+                        range = NULL, value = NULL, weight = 3){ #nolint
   #' Add a response to the experiment
   #'
   #' @param name a unique length 1 character vector giving the name of a response
@@ -12,7 +12,7 @@ add_response = function(name = paste0("y", length(self$responses) + 1),
   #' @details
   #' The value function must accept two positional arguments. The first is for the 'current' response
   #' value while the second is for a vector of all input response values. These two inputs can then
-  #' be used however you like to return a numeric value.
+  #' be used however you like to return a numeric value. e.g. `function(y, hist){100 - y}`
   if (!is.numeric(weight) || length(weight) != 1) stop("Treatment weight must be a single numeric vector")
   if (!is.character(name) || length(name) != 1) stop("Treatment name must be a single character vector")
   if ((!is.null(range) && length(range) != 2) || (!is.null(range) && !is.numeric(range))){ #nolint
@@ -32,6 +32,7 @@ drop_response = function(name){
   #'
   #' @param name a unique length 1 character vector giving the name of the response to drop
   #' @return invisible
+  if (length(name) != 1) stop("Only one response can be dropped at a time")
   names = purrr::modify_depth(self$responses, 1, `[[`, "name")
   if (!name %in% names) stop("Response does not exist.")
   self$responses[[which(names == name)]] = NULL
@@ -45,13 +46,15 @@ add_treatment = function(name = paste0("x", length(self$treatments) + 1), bounda
   #' @param name a unique length 1 character vector giving the name of a treatment
   #' @param boundaries optional length 2 numeric vector giving boundaries on possible treatment levels
   #' @return invisible
+  l = length(self$treatments) + 1
+  if (l > self$k) stop("You have already added as many treatments as specified")
+
   if (!is.character(name) || length(name) != 1) stop("Treatment name must be a single character vector")
   if ( (!is.null(boundaries) && length(boundaries) != 2) ||
       (!is.null(boundaries) && !is.numeric(boundaries))) {
     stop("Boundaries must be exactly two numeric values (or left NULL)")
   }
-  l = length(self$treatments) + 1
-  if (l > self$k) stop("You have already added as many treatments as specified")
+
   names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
   if (name %in% names) stop("A treatment with that name already exists")
   self$treatments[[l]] = list(name = name, boundaries = boundaries)
@@ -64,6 +67,7 @@ drop_treatment = function(name){
   #'
   #' @param name a unique length 1 character vector giving the name of the treatment to drop
   #' @return invisible
+  if (length(name) != 1) stop("Only one treatment can be dropped at a time")
   names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
   if (!name %in% names) stop("Treatment does not exist.")
   self$treatments[[which(names == name)]] = NULL
@@ -80,6 +84,7 @@ add_constraint = function(constraint){
   #' @examples
   #' experiment$add_constraint(x1 + x2 <= 14)
   const = substitute(constraint)
+  if (class(const) != "call") stop("Constraints must be passed as expressions.")
   const_string = deparse(const)
   comparison_operators = c(" < ", " > ", " <= ", " >= ", " == ")
   comparison_matches = vapply(comparison_operators, grepl, FUN.VALUE = logical(1), x = const_string)
@@ -146,8 +151,10 @@ generate_initial_simplex = function(method = "manual", data = NULL){
     if (nrow(data) != self$k + 1) stop(paste0("You must provide ", self$k + 1, " initial vertices")) #nolint
     data = data[names]
     if (any(is.na(data)) || any(is.null(data))) stop("Vertices cannot contain missing coordinates.")
-
-    # TODO: check cohypoplanarity (page 164)
+    if (determine_cohypoplanarity(data)){
+      stop("Provided simplex is cohypoplanar (e.g. it is degenerate in at least one dimension")
+    }
+    self$simplexes[[1]] = data
   } else if (method %in% c("corner", "tilted")){
     # TODO: collect step size and starting coordinate for each factor (page 169)
   }

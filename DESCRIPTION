@@ -1,4 +1,4 @@
-Package: simplexExperiments
+Package: sequentialSimplex
 Title: Experimentation via Sequential Simplex Optimization
 Version: 0.0.0.9000
 Authors@R: 
