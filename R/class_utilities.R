@@ -5,7 +5,7 @@ init = function(k = NA_integer_) {
   #'
   #' @return invisible
   #' @examples
-  #' experiment$new()
+  #' experiment$new(k = 3)
   if (k < 0) stop("You must specify a whole number of dimensions")
   self$k = k
   invisible()

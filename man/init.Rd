@@ -16,5 +16,5 @@ invisible
 Initialize the R6 Class
 }
 \examples{
-experiment$new()
+experiment$new(k = 3)
 }

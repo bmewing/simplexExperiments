@@ -15,6 +15,6 @@ invisible
 \description{
 Add a constraint to the experimental factors
 }
-\examples{
-experiment$add_constraint(x1 + x2 <= 14)
+\details{
+Call is made using expressions, e.g. `experiment$add_constraint(x1 + x2 <= 14)`
 }

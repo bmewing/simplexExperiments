@@ -77,8 +77,8 @@ add_constraint = function(constraint){
   #' @param constraint a comparitive formula referencing treatment names
   #' @return invisible
   #'
-  #' @examples
-  #' experiment$add_constraint(x1 + x2 <= 14)
+  #' @details
+  #' Call is made using expressions, e.g. `experiment$add_constraint(x1 + x2 <= 14)`
   const = substitute(constraint)
   if (class(const) != "call") stop("Constraints must be passed as expressions.")
   const_string = deparse(const)
