@@ -2,10 +2,13 @@ init = function(k = NA_integer_) {
   #' Initialize the R6 Class
   #'
   #' @param k dimensionality of space being experimented
+  #'
+  #' @return invisible
   #' @examples
   #' experiment$new()
   if (k < 0) stop("You must specify a whole number of dimensions")
   self$k = k
+  invisible()
 }
 
 
@@ -45,7 +48,7 @@ valid_simplex = function(simplex, names, boundaries, constraints){
   #' This is an implementation specific to this package as it returns TRUE if r is null.
   #' Not exported as it's not intended for broader use
   if (is.null(r)) return(rep(TRUE, length(x)))
-  x >= min(r) && x <= max(r)
+  x >= min(r) & x <= max(r)
 }
 
 
@@ -72,4 +75,19 @@ satisfied_constraints = function(simplex, constraints){
   #' @return logical indicating if all constraints are met
   if (length(constraints) == 0) return(TRUE)
   purrr::map_lgl(constraints, function(expr) all(with(simplex, expr = eval(expr))))
+}
+
+
+append_responses = function(simplex, responses){
+  #' Append experiment responses to simplex data frame
+  #'
+  #' @param simplex data.frame of simplex
+  #' @param responses vector of response names
+  #'
+  #' @return data.frame of simplex with responses appended
+
+  for (r in responses){
+    simplex[[r]] = NA
+  }
+  return(simplex)
 }

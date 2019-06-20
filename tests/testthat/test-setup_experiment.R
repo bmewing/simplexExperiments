@@ -87,4 +87,23 @@ test_that("generate_initial_simplex", {
   setup[["x1"]][1] = 1
   setup[["x2"]][1] = 2
   expect_error(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "not within boundaries")
+
+  exp = experiment$new(k = 2)
+  exp$add_treatment()
+  exp$add_treatment()
+  exp$add_response(name = "ph", range = c(0, 5), value = function(y, h){ (5 - y) ^ 2}) #nolint
+  setup = data.frame(x1 = c(60, 30, 65), x2 = c(20, 40, 80))
+  expect_message(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "Initial Simplex")
+
+  exp = experiment$new(k = 2)
+  exp$add_treatment()
+  exp$add_treatment(boundaries = c(5, 10))
+  exp$add_response(name = "ph", range = c(0, 5), value = function(y, h){ (5 - y) ^ 2}) #nolint
+  setup = data.frame(Trtmnt = c("x1", "x2"), Start = c(1, 1), step = c(2, 1))
+  expect_error(exp$generate_initial_simplex(method = "joke", data = setup), regexp = "one of")
+  expect_error(exp$generate_initial_simplex(method = "corner", data = setup), regexp = "satisfy boundaries")
+  expect_error(exp$generate_initial_simplex(method = "tilted", data = setup), regexp = "satisfy boundaries")
+  setup = data.frame(Trtmnt = c("x1", "x2"), Start = c(1, 10), step = c(3, 2))
+  expect_error(exp$generate_initial_simplex(method = "corner", data = setup), regexp = "does not satisfy")
+  expect_error(exp$generate_initial_simplex(method = "tilted", data = setup), regexp = "does not satisfy")
 })

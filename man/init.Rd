@@ -9,6 +9,9 @@ init(k = NA_integer_)
 \arguments{
 \item{k}{dimensionality of space being experimented}
 }
+\value{
+invisible
+}
 \description{
 Initialize the R6 Class
 }

@@ -18,10 +18,13 @@ experiment = R6::R6Class("Simplex Experiment",
                            drop_treatment = drop_treatment,
                            add_constraint = add_constraint,
                            drop_constraint = drop_constraint,
-                           generate_initial_simplex = generate_initial_simplex
+                           generate_initial_simplex = generate_initial_simplex,
+                           submit_responses = submit_responses
                          ),
                          private = list(
                            next_vertex_id = 1,
+                           vertex_value = c(),
                            valid_experiment = valid_experiment,
-                           valid_simplex = valid_simplex
+                           valid_simplex = valid_simplex,
+                           append_responses = append_responses
                          ))

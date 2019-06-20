@@ -18,11 +18,9 @@ add_response = function(name = paste0("y", length(self$responses) + 1),
   if ((!is.null(range) && length(range) != 2) || (!is.null(range) && !is.numeric(range))){ #nolint
     stop("Response ranges must be exactly two numeric values (or left NULL)")
   }
-  names = purrr::modify_depth(self$responses, 1, `[[`, "name")
-  if (name %in% names) stop("A response with that name already exists")
+  if (name %in% names(self$responses)) stop("A response with that name already exists")
   if (!is.function(value)) stop("You must provide a function to compute the value of a given response")
-  l = length(self$responses) + 1
-  self$responses[[l]] = list(name = name, range = range, value = value, weight = weight)
+  self$responses[[name]] = list(range = range, value = value, weight = weight)
   invisible()
 }
 
@@ -33,9 +31,8 @@ drop_response = function(name){
   #' @param name a unique length 1 character vector giving the name of the response to drop
   #' @return invisible
   if (length(name) != 1) stop("Only one response can be dropped at a time")
-  names = purrr::modify_depth(self$responses, 1, `[[`, "name")
-  if (!name %in% names) stop("Response does not exist.")
-  self$responses[[which(names == name)]] = NULL
+  if (!name %in% names(self$responses)) stop("Response does not exist.")
+  self$responses[[name]] = NULL
   invisible()
 }
 
@@ -55,9 +52,9 @@ add_treatment = function(name = paste0("x", length(self$treatments) + 1), bounda
     stop("Boundaries must be exactly two numeric values (or left NULL)")
   }
 
-  names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
+  names = names(self$treatments)
   if (name %in% names) stop("A treatment with that name already exists")
-  self$treatments[[l]] = list(name = name, boundaries = boundaries)
+  self$treatments[[name]] = list(boundaries = boundaries)
   invisible()
 }
 
@@ -68,9 +65,8 @@ drop_treatment = function(name){
   #' @param name a unique length 1 character vector giving the name of the treatment to drop
   #' @return invisible
   if (length(name) != 1) stop("Only one treatment can be dropped at a time")
-  names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
-  if (!name %in% names) stop("Treatment does not exist.")
-  self$treatments[[which(names == name)]] = NULL
+  if (!name %in% names(self$treatments)) stop("Treatment does not exist.")
+  self$treatments[[name]] = NULL
   invisible()
 }
 
@@ -90,8 +86,7 @@ add_constraint = function(constraint){
   comparison_matches = vapply(comparison_operators, grepl, FUN.VALUE = logical(1), x = const_string)
   if (sum(comparison_matches) != 1) stop("Constraint must include a comparison operator")
 
-  names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
-  tmp = gen_fake_treatments(names)
+  tmp = gen_fake_treatments(names(self$treatments))
   tryCatch({
     with(tmp, expr = eval(const))
     l = length(self$constraints) + 1
@@ -146,9 +141,10 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   if (length(method) != 1) stop("You can only specify one method for initial generation")
   if (is.null(data)) stop("You must provide information through the 'data' parameter to generate the initial simplex")
 
-  names = purrr::modify_depth(self$treatments, 1, `[[`, "name") #nolint
+  names = names(self$treatments)
+  responses = names(self$responses)
   k = self$k
-  names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
+  names = names(self$treatments)
   boundaries = purrr::modify_depth(self$treatments, 1, `[[`, "boundaries")
 
   if (method == "manual"){
@@ -167,38 +163,45 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   } else if (method %in% c("corner", "tilted")){
     if (nrow(data) != k) stop("You must provide one row per treatment to generate a corner or tilted design.")
     if (ncol(data) != 3) stop("You must provide three columns, treatment names, starting values and step sizes.")
-    if (!is.character(data[[1]])) stop("The first column provided must contain treatment names.")
+
+    if (any(is.na(as.character(data[[1]])))) stop("The first column provided must contain treatment names.")
     if (!all(names %in% data[[1]])) stop("Not all treatments are represented in the data provided.")
     if (!is.numeric(data[[2]])) stop("The second column provided must contain starting values.")
     if (!is.numeric(data[[3]])) stop("The third column provided must contain step sizes.")
     names(data) = c("tmt", "start", "step")
-    data[["p"]] = if (method == "corner") data[["step"]] * (sqrt(k + 1) + k - 1) / (k * sqrt(2)) else data[["step"]]
-    data[["q"]] = if (method == "corner") data[["step"]] * (sqrt(k + 1) - 1) / (k * sqrt(2)) else 0
+    data[["p"]] = if (method == "tilted") data[["step"]] * (sqrt(k + 1) + k - 1) / (k * sqrt(2)) else data[["step"]]
+    data[["q"]] = if (method == "tilted") data[["step"]] * (sqrt(k + 1) - 1) / (k * sqrt(2)) else 0
 
     initial = as.data.frame(matrix(rep(data[["start"]], self$k + 1), nrow = self$k + 1, byrow = TRUE))
     names(initial) = data[["tmt"]]
 
-    if (!private$valid_simplex(initial)) stop("Starting values provided do not satisfy boundaries or constraints.")
+    if (!private$valid_simplex(initial, names, boundaries, self$constraints)){
+      stop("Starting values provided do not satisfy boundaries or constraints.")
+    }
 
     for (i in 1:nrow(data)){
       initial[i, i] = initial[i, i] + data[["p"]][i]
       initial[i, -i] = initial[i, -i] + data[["q"]][-i]
     }
 
-    if (private$valid_simplex(initial)){
+    if (private$valid_simplex(initial, names, boundaries, self$constraints)){
       simplex_to_write = initial
     } else {
       stop("Generated simplex is not within boundaries or does not satisfy constraints.
        Consider changing step sizes, starting values or providing a manual design.")
     }
+  } else {
+    stop("Method must be one of 'manual, 'tilted', or 'corner'.")
   }
 
   if (!is.null(simplex_to_write)){
-    simplex_to_write[["Vertex ID"]] = 1:(k + 1)
+    simplex_to_write[["Vertex_ID"]] = 1:(k + 1)
     private$next_vertex_id = k + 2
-    self$simplexes[[1]] = simplex_to_write
+
+    self$simplexes[[1]] = private$append_responses(simplex_to_write, responses)
+
     message("Initial Simplex:")
-    print(self$simplexes[[1]])
+    print(self$simplexes[[1]][c("Vertex_ID", names)], row.names = FALSE)
   } else {
     stop("Uh oh, something went wrong!")
   }
