@@ -136,7 +136,9 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   #' The initial simplex has as the first vertex the combination of all starting coordinates. Each sequential vertex is
   #' produced by adding some amount of the step size to one or more of the other treatments.
 
-  private$valid() #nolint
+  private$valid_experiment() #nolint
+
+  simplex_to_write = NULL
 
   if (length(self$simplexes) != 0){ #nolint
     stop("This experiment already has simplexes, you cannot generate a new initial one.")
@@ -145,18 +147,60 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   if (is.null(data)) stop("You must provide information through the 'data' parameter to generate the initial simplex")
 
   names = purrr::modify_depth(self$treatments, 1, `[[`, "name") #nolint
+  k = self$k
+  names = purrr::modify_depth(self$treatments, 1, `[[`, "name")
+  boundaries = purrr::modify_depth(self$treatments, 1, `[[`, "boundaries")
 
   if (method == "manual"){
     if (!all(names %in% names(data))) stop("Not all treatments are included in the initial simplex")
-    if (nrow(data) != self$k + 1) stop(paste0("You must provide ", self$k + 1, " initial vertices")) #nolint
-    data = data[names]
+    if (nrow(data) != k + 1) stop(paste0("You must provide ", k + 1, " initial vertices")) #nolint
+    data = data[unlist(names)]
     if (any(is.na(data)) || any(is.null(data))) stop("Vertices cannot contain missing coordinates.")
     if (determine_cohypoplanarity(data)){
       stop("Provided simplex is cohypoplanar (e.g. it is degenerate in at least one dimension")
     }
-    self$simplexes[[1]] = data
+    if (private$valid_simplex(data, names, boundaries, self$constraints)){
+      simplex_to_write = data
+    } else {
+      stop("Provided simplex is not within boundaries or does not satisfy constraints")
+    }
   } else if (method %in% c("corner", "tilted")){
-    # TODO: collect step size and starting coordinate for each factor (page 169)
+    if (nrow(data) != k) stop("You must provide one row per treatment to generate a corner or tilted design.")
+    if (ncol(data) != 3) stop("You must provide three columns, treatment names, starting values and step sizes.")
+    if (!is.character(data[[1]])) stop("The first column provided must contain treatment names.")
+    if (!all(names %in% data[[1]])) stop("Not all treatments are represented in the data provided.")
+    if (!is.numeric(data[[2]])) stop("The second column provided must contain starting values.")
+    if (!is.numeric(data[[3]])) stop("The third column provided must contain step sizes.")
+    names(data) = c("tmt", "start", "step")
+    data[["p"]] = if (method == "corner") data[["step"]] * (sqrt(k + 1) + k - 1) / (k * sqrt(2)) else data[["step"]]
+    data[["q"]] = if (method == "corner") data[["step"]] * (sqrt(k + 1) - 1) / (k * sqrt(2)) else 0
+
+    initial = as.data.frame(matrix(rep(data[["start"]], self$k + 1), nrow = self$k + 1, byrow = TRUE))
+    names(initial) = data[["tmt"]]
+
+    if (!private$valid_simplex(initial)) stop("Starting values provided do not satisfy boundaries or constraints.")
+
+    for (i in 1:nrow(data)){
+      initial[i, i] = initial[i, i] + data[["p"]][i]
+      initial[i, -i] = initial[i, -i] + data[["q"]][-i]
+    }
+
+    if (private$valid_simplex(initial)){
+      simplex_to_write = initial
+    } else {
+      stop("Generated simplex is not within boundaries or does not satisfy constraints.
+       Consider changing step sizes, starting values or providing a manual design.")
+    }
+  }
+
+  if (!is.null(simplex_to_write)){
+    simplex_to_write[["Vertex ID"]] = 1:(k + 1)
+    private$next_vertex_id = k + 2
+    self$simplexes[[1]] = simplex_to_write
+    message("Initial Simplex:")
+    print(self$simplexes[[1]])
+  } else {
+    stop("Uh oh, something went wrong!")
   }
   invisible()
 }

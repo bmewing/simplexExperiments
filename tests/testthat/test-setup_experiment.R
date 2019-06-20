@@ -68,3 +68,23 @@ test_that("add_constraint", {
   exp$add_constraint(x1 + x3 < 7)
   expect_length(exp$constraints, 2)
 })
+
+test_that("generate_initial_simplex", {
+  exp = experiment$new(k = 2)
+  exp$add_treatment()
+  exp$add_response(name = "ph", range = c(0, 5), value = function(y, h){ (5 - y) ^ 2}) #nolint
+  setup = data.frame(x1 = c(1, 5, 4), x2 = c(9, 5, 6))
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "You have not provided")
+  exp$add_treatment(boundaries = c(5, 10))
+  exp$add_constraint(x1 + x2 <= 10)
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "cohypoplanar")
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup[1]), regexp = "Not all treatments")
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup[-1, ]), regexp = "You must provide")
+  setup[["x1"]][1] = NA
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "missing coordinates")
+  setup[["x1"]][1] = 10
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "not within boundaries")
+  setup[["x1"]][1] = 1
+  setup[["x2"]][1] = 2
+  expect_error(exp$generate_initial_simplex(method = "manual", data = setup), regexp = "not within boundaries")
+})
