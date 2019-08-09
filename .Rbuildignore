@@ -1,2 +1,6 @@
 ^simplexExperiments\.Rproj$
 ^\.Rproj\.user$
+.lintr
+.travis.yml
+codecov.yml
+internal_data

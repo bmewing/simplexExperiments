@@ -1,5 +1,5 @@
 Package: simplexExperiments
-Title: Experimentation via Sequential Simplex Optimization.
+Title: Experimentation via Sequential Simplex Optimization
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Mark",
@@ -8,11 +8,12 @@ Authors@R:
            email = "b.mark@ewingsonline.com")
 Description: Goal is to implement an R6 class which enables experimentor 
   to do one run at a time while moving toward global optimum.
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-  R6
+  R6,
+  purrr
 Suggests:
   covr,
   testthat
