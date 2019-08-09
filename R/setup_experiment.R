@@ -141,21 +141,20 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   if (length(method) != 1) stop("You can only specify one method for initial generation")
   if (is.null(data)) stop("You must provide information through the 'data' parameter to generate the initial simplex")
 
-  names = names(self$treatments)
+  treatments = names(self$treatments)
   responses = names(self$responses)
   k = self$k
-  names = names(self$treatments)
-  boundaries = purrr::modify_depth(self$treatments, 1, `[[`, "boundaries")
+  boundaries = lapply(self$treatments, function(x){x[["boundaries"]]})
 
   if (method == "manual"){
-    if (!all(names %in% names(data))) stop("Not all treatments are included in the initial simplex")
+    if (!all(treatments %in% names(data))) stop("Not all treatments are included in the initial simplex")
     if (nrow(data) != k + 1) stop(paste0("You must provide ", k + 1, " initial vertices")) #nolint
-    data = data[unlist(names)]
+    data = data[unlist(treatments)]
     if (any(is.na(data)) || any(is.null(data))) stop("Vertices cannot contain missing coordinates.")
     if (determine_cohypoplanarity(data)){
       stop("Provided simplex is cohypoplanar (e.g. it is degenerate in at least one dimension")
     }
-    if (private$valid_simplex(data, names, boundaries, self$constraints)){
+    if (private$valid_simplex(data, treatments, boundaries, self$constraints)){
       simplex_to_write = data
     } else {
       stop("Provided simplex is not within boundaries or does not satisfy constraints")
@@ -165,7 +164,7 @@ generate_initial_simplex = function(method = "manual", data = NULL){
     if (ncol(data) != 3) stop("You must provide three columns, treatment names, starting values and step sizes.")
 
     if (any(is.na(as.character(data[[1]])))) stop("The first column provided must contain treatment names.")
-    if (!all(names %in% data[[1]])) stop("Not all treatments are represented in the data provided.")
+    if (!all(treatments %in% data[[1]])) stop("Not all treatments are represented in the data provided.")
     if (!is.numeric(data[[2]])) stop("The second column provided must contain starting values.")
     if (!is.numeric(data[[3]])) stop("The third column provided must contain step sizes.")
     names(data) = c("tmt", "start", "step")
@@ -175,7 +174,7 @@ generate_initial_simplex = function(method = "manual", data = NULL){
     initial = as.data.frame(matrix(rep(data[["start"]], self$k + 1), nrow = self$k + 1, byrow = TRUE))
     names(initial) = data[["tmt"]]
 
-    if (!private$valid_simplex(initial, names, boundaries, self$constraints)){
+    if (!private$valid_simplex(initial, treatments, boundaries, self$constraints)){
       stop("Starting values provided do not satisfy boundaries or constraints.")
     }
 
@@ -184,7 +183,7 @@ generate_initial_simplex = function(method = "manual", data = NULL){
       initial[i, -i] = initial[i, -i] + data[["q"]][-i]
     }
 
-    if (private$valid_simplex(initial, names, boundaries, self$constraints)){
+    if (private$valid_simplex(initial, treatments, boundaries, self$constraints)){
       simplex_to_write = initial
     } else {
       stop("Generated simplex is not within boundaries or does not satisfy constraints.
@@ -196,12 +195,13 @@ generate_initial_simplex = function(method = "manual", data = NULL){
 
   if (!is.null(simplex_to_write)){
     simplex_to_write[["Vertex_ID"]] = 1:(k + 1)
+
     private$next_vertex_id = k + 2
 
     self$simplexes[[1]] = private$append_responses(simplex_to_write, responses)
 
     message("Initial Simplex:")
-    print(self$simplexes[[1]][c("Vertex_ID", names)], row.names = FALSE)
+    print(self$simplexes[[1]][c("Vertex_ID", treatments)], row.names = FALSE)
   } else {
     stop("Uh oh, something went wrong!")
   }
