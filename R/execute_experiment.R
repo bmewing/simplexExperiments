@@ -33,12 +33,10 @@ submit_responses = function(data = NULL){
     if (!identical(c("Vertex_ID", responses), names(data))){
       stop("Input data must have exactly 'Vertex_ID' and each response")
     }
-    if (any(purrr::map_lgl(data, function(x) any(is.na(x)) | any(!is.numeric(x))))){
+    if (any(vapply(data, function(x) any(is.na(x)) | any(!is.numeric(x)), FUN.VALUE = logical(1)))){
       stop("Input data must have a numeric value for each response.")
     }
-    purrr::map_lgl(responses, function(j){
-      check_response_range(data[[j]], self$responses, j)
-    })
+    vapply(responses, function(j){check_response_range(data[[j]], self$responses, j)}, FUN.VALUE = logical(1)) #nolint
     new_rows = merge(current[c("Vertex_ID", treatments)], data, by = "Vertex_ID")
     old_rows = current[!current[["Vertex_ID"]] %in% new_rows[["Vertex_ID"]], ]
     self$simplexes[[n]] = rbind(old_rows, new_rows)

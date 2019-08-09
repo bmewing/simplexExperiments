@@ -60,9 +60,9 @@ within_boundaries = function(simplex, names, boundaries){
   #' @param boundaries list of treatment boundaries
   #'
   #' @return logical indicating if all values are within boundaries
-  all(purrr::map_lgl(seq_along(names), function(i){
-    all(simplex[[names[[i]]]] %between% boundaries[[i]])
-  }))
+  check = vapply(seq_along(names), function(i){all(simplex[[names[[i]]]] %between% boundaries[[i]])}, #nolint
+                 FUN.VALUE = logical(1))
+  all(check)
 }
 
 
@@ -74,7 +74,7 @@ satisfied_constraints = function(simplex, constraints){
   #'
   #' @return logical indicating if all constraints are met
   if (length(constraints) == 0) return(TRUE)
-  purrr::map_lgl(constraints, function(expr) all(with(simplex, expr = eval(expr))))
+  vapply(constraints, function(expr) all(with(simplex, expr = eval(expr))), FUN.VALUE = logical(1))
 }
 
 

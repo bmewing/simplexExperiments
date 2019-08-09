@@ -144,7 +144,7 @@ generate_initial_simplex = function(method = "manual", data = NULL){
   treatments = names(self$treatments)
   responses = names(self$responses)
   k = self$k
-  boundaries = lapply(self$treatments, function(x){x[["boundaries"]]})
+  boundaries = lapply(self$treatments, function(x){x[["boundaries"]]}) #nolint
 
   if (method == "manual"){
     if (!all(treatments %in% names(data))) stop("Not all treatments are included in the initial simplex")
